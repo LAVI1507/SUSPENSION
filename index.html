@@ -85,6 +85,23 @@ button{font:500 .92rem "Barlow",sans-serif;color:var(--ink);background:var(--pan
 .ws .res{font-weight:600}
 #bodyG{transition:transform .25s ease-out}
 @media (prefers-reduced-motion:reduce){#bodyG{transition:none}}
+nav.tabs{overflow-x:auto;scrollbar-width:none}
+nav.tabs button{white-space:nowrap}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:8px 0}
+.ctl label{display:flex;align-items:center;gap:6px;color:var(--steel);font-size:.9rem}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:6px;padding:4px 6px;max-width:100%}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 14px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.chart{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:8px 10px;margin:10px 0}
+.chart h3{margin:4px 0 0}
+.chart .cap{color:var(--steel);font-size:.84rem;margin:2px 0 4px}
+.chart svg text{font-family:"Barlow",system-ui,sans-serif}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:860px){.cgrid{grid-template-columns:1fr}}
+.warn{color:var(--warn);font-weight:600}
+.linknote{background:var(--tint);border-radius:6px;padding:6px 10px;font-size:.88rem;margin:6px 0}
+input:disabled{opacity:.75;border-style:dashed}
 </style>
 </head>
 <body>
@@ -94,6 +111,8 @@ button{font:500 .92rem "Barlow",sans-serif;color:var(--ink);background:var(--pan
 
   <nav class="tabs" role="tablist">
     <button role="tab" aria-selected="true" data-tab="calc">Calculate</button>
+    <button role="tab" aria-selected="false" data-tab="hp">Hardpoints</button>
+    <button role="tab" aria-selected="false" data-tab="graphs">Tuning graphs</button>
     <button role="tab" aria-selected="false" data-tab="learn">Learn</button>
     <button role="tab" aria-selected="false" data-tab="work">Worked example</button>
     <button role="tab" aria-selected="false" data-tab="tune">Tuning guide</button>
@@ -141,6 +160,75 @@ button{font:500 .92rem "Barlow",sans-serif;color:var(--ink);background:var(--pan
         <div class="card scroll"><table id="tRes"></table></div>
         <p class="note">Ride and roll flags use typical passenger-car ranges. ARB stress flags use acceptance bands of yield FOS 1.5–1.9 and torsional FOS 0.9–1.3. All are guides; replace with your program targets.</p>
       </div>
+    </div>
+  </section>
+
+  <!-- HARDPOINTS -->
+  <section class="pane" id="hp" role="tabpanel" hidden>
+    <p class="note">Coordinates in mm for the right-hand side at design load. X forward, Y outward from the vehicle centreline, Z up from the ground. Front-view kinematics use Y and Z; X sets caster and trail. Tap a point name for its meaning.</p>
+    <div class="ctl">
+      <span class="seg" role="group" aria-label="Axle"><button id="hpF" aria-pressed="true">Front</button><button id="hpR" aria-pressed="false">Rear</button></span>
+      <label>Suspension type <select id="hpType"><option value="mac">MacPherson strut</option><option value="sla">Double wishbone (SLA)</option></select></label>
+      <label>Static camber <input type="number" step="any" id="hpCam"> °</label>
+    </div>
+    <div class="grid">
+      <div>
+        <div class="card scroll"><table id="tHP"></table></div>
+        <label class="ctl" style="color:var(--ink)"><input type="checkbox" id="hpLink"> Use hardpoint results in calculations (track, roll centre, spring motion ratio; strut damper ratio for MacPherson)</label>
+        <div class="bar"><button id="hpReset">Reset this axle's hardpoints</button></div>
+      </div>
+      <div>
+        <div class="chart">
+          <h3 id="fvTitle">Front view</h3>
+          <div id="fv"></div>
+          <label class="gslider">Wheel travel <input id="trav" type="range" min="-80" max="80" step="1" value="0"> <span id="travv">0 mm</span></label>
+        </div>
+      </div>
+    </div>
+    <h2>Static geometry results</h2>
+    <div class="card scroll"><table id="tHPres"></table></div>
+    <h2>Kinematics vs wheel travel</h2>
+    <p class="note">Both wheels in parallel travel (heave). Bump is positive.</p>
+    <div class="cgrid">
+      <div class="chart"><h3>Camber</h3><div id="gCam"></div></div>
+      <div class="chart"><h3>Roll centre height</h3><div id="gRC"></div></div>
+      <div class="chart"><h3>Track change</h3><div id="gTrk"></div></div>
+      <div class="chart"><h3>Spring motion ratio</h3><div id="gMR"></div></div>
+    </div>
+  </section>
+
+  <!-- GRAPHS -->
+  <section class="pane" id="graphs" role="tabpanel" hidden>
+    <p class="note">All graphs use the current inputs from the Calculate tab and update as you change them.</p>
+    <div class="chart">
+      <h3>Ride transmissibility</h3>
+      <p class="cap">Body movement per unit road movement, quarter-car model per axle. The first peak is body bounce, the second is wheel hop.</p>
+      <div id="gTr"></div>
+    </div>
+    <div class="chart">
+      <h3>Step response and flat ride</h3>
+      <p class="cap">Body height after driving over a step. The rear wheel meets the step later by wheelbase ÷ speed. Asymmetric bump and rebound damping included.</p>
+      <div class="ctl">
+        <label>Speed <input type="number" id="spd" value="40" step="any"> km/h</label>
+        <label>Step height <input type="number" id="stepH" value="30" step="any"> mm</label>
+      </div>
+      <div id="gStep"></div>
+      <div id="gPitch"></div>
+    </div>
+    <div class="chart">
+      <h3>Sensitivity explorer</h3>
+      <p class="cap">Sweeps one input from −40% to +40% of its current value and plots the chosen output. The vertical line marks the current value; the shaded band is the typical range.</p>
+      <div class="ctl">
+        <label>Input <select id="sensP"></select></label>
+        <label>Output <select id="sensO"></select></label>
+      </div>
+      <div id="gSens"></div>
+    </div>
+    <div class="chart">
+      <h3>Body roll vs lateral acceleration</h3>
+      <p class="cap">Linear roll model, with the inner-wheel load remaining on each axle. Wheel lift is predicted where a line reaches zero.</p>
+      <div id="gRoll"></div>
+      <div id="gLift"></div>
     </div>
   </section>
 
@@ -215,6 +303,38 @@ button{font:500 .92rem "Barlow",sans-serif;color:var(--ink);background:var(--pan
     <p>At the design roll angle φ, the bar twists by θ. Torsion gives shear; the offset between the arm and the bush adds bending. The combined maximum principal stress is compared to yield.</p>
     <div class="eq">θ = MR<sub>arb</sub>·φ·t / a &nbsp;&nbsp; T = K<sub>θ</sub>·θ·η &nbsp;&nbsp; τ = T·(d/2) / J<br>F = T / a &nbsp;&nbsp; M = F·e &nbsp;&nbsp; σ<sub>b</sub> = M·(d/2) / (J/2)<br>σ<sub>1</sub> = σ<sub>b</sub>/2 + √((σ<sub>b</sub>/2)² + τ²) &nbsp;&nbsp; FOS<sub>y</sub> = S<sub>y</sub>/σ<sub>1</sub> &nbsp;&nbsp; FOS<sub>τ</sub> = 0.577·S<sub>y</sub>/τ</div>
     <p>This is a hand check for sizing. Confirm stress concentration at bends and the fatigue life with CAE and rig testing.</p>
+    <h2>12. Hardpoints and coordinates</h2>
+    <p><b>Hardpoints</b> are the joint and mount locations that define the linkage: arm pivots, ball joints, strut top and spring seats. Once they are fixed, the kinematics (how the wheel moves) are fixed.</p>
+    <p>This app uses the common vehicle frame: X forward, Y outward (right-hand side), Z up from the ground at design load. A 2D front-view solver moves the lower arm, finds the knuckle position that satisfies the links, and records the wheel at each travel step.</p>
+
+    <h2>13. Instant centre and roll centre</h2>
+    <p>In front view, the knuckle momentarily rotates about its <b>instant centre (IC)</b>. For a double wishbone it is where the two arm lines meet. For a MacPherson it is where the lower arm line meets a line through the strut top perpendicular to the strut.</p>
+    <p>The <b>roll centre</b> is where the line from the tyre contact patch through the IC crosses the vehicle centreline. As the wheel moves, the IC moves, so the roll centre migrates. Small migration gives consistent handling.</p>
+    <div class="eq">IC = intersection of arm lines &nbsp;&nbsp; RC height = point on centreline of line (contact patch → IC)</div>
+
+    <h2>14. Camber gain, track change and geometric motion ratio</h2>
+    <ul>
+      <li><b>Camber gain</b>: camber change per mm of bump. Negative gain in bump helps the outer tyre in roll. Short upper arms give more gain. MacPherson struts give little gain.</li>
+      <li><b>Track change</b>: the contact patch moving sideways in bump causes tyre scrub and lateral disturbance on bumpy roads. Keep it small near design height.</li>
+      <li><b>Spring motion ratio from geometry</b>: the change in spring length per mm of wheel travel. A rising curve means progressive wheel rate.</li>
+    </ul>
+
+    <h2>15. Steering axis</h2>
+    <ul>
+      <li><b>Kingpin inclination (KPI)</b>: steering axis tilt in front view. Gives self-centring; MacPherson 10–15°, wishbone 8–13°.</li>
+      <li><b>Scrub radius</b>: lateral distance at the ground from the steering axis to the contact patch centre. Large values feed brake and road forces into the steering. EVs often aim for small positive or negative values.</li>
+      <li><b>Caster</b>: steering axis tilt in side view, top rearward is positive. 3–7° typical. More caster gives more self-centring and camber gain when steering.</li>
+      <li><b>Mechanical trail</b>: distance at the ground from the steering axis intercept to the wheel centre, ahead is positive. 15–35 mm typical.</li>
+    </ul>
+    <p class="note">The front-view solver does not compute toe (bump steer) or anti-dive and anti-squat, which need full 3D or side-view geometry. Use these results for concept layout and confirm with a 3D kinematics tool.</p>
+
+    <h2>16. Reading the tuning graphs</h2>
+    <ul>
+      <li><b>Transmissibility</b>: a ratio above 1 means the body moves more than the road. More damping lowers both peaks but raises transmission between them (about 3–8 Hz), where people are most sensitive to vertical vibration.</li>
+      <li><b>Step response</b>: a well-damped body settles in about one overshoot. With good flat ride the rear trace catches up with the front, and the pitch trace dies out quickly.</li>
+      <li><b>Sensitivity explorer</b>: a steep curve means a strong tuning lever. Use it to pick which part to change, e.g. ARB diameter vs spring rate for roll gradient.</li>
+    </ul>
+
   </section>
 
   <!-- WORKED EXAMPLE -->
@@ -269,7 +389,7 @@ const INPUTS=[
 const INFO={
  M:["Total vehicle mass for the load case you are tuning, e.g. kerb plus two occupants.","EV sedan 1900–2200 kg, EV SUV 2300–2700 kg.","Higher mass lowers ride frequency and raises roll moment."],
  wf:["Share of total mass carried by the front axle.","EVs with floor batteries 46–50%.","Sets corner sprung mass front vs rear and where the CG sits along the roll axis."],
- L:["Distance between front and rear axle centres.","2700–3100 mm.","Used to locate the CG between axles for the roll axis height."],
+ L:["Distance between front and rear axle centres.","2700–3100 mm.","Locates the CG between axles for the roll axis height, and sets the rear input delay in the step response."],
  hcg:["Height of the vehicle centre of gravity above the ground.","EVs 450–600 mm, ICE sedans 520–580 mm.","Higher CG gives more roll and more load transfer."],
  rr:["Loaded tyre radius, used as the unsprung mass CG height.","300–360 mm.","Small effect on load transfer through the unsprung mass term."],
  G:["Shear modulus of the bar material.","Spring steel about 79,300 MPa.","Bar stiffness is directly proportional to G."],
@@ -292,6 +412,23 @@ const INFO={
  mra:["Link (bar end) displacement divided by wheel displacement.","0.5–0.8 front, 0.6–1.0 rear.","Bar roll stiffness ∝ MR²."],
  eta:["Factor for arm bending, bush and link compliance that reduces effective bar rate.","75–90%.","Calibrate from CAE or a rig test for accurate roll prediction."]
 };
+const PT={wc:"Wheel centre",lci:"Lower arm inner pivot",lbj:"Lower ball joint",uci:"Upper arm inner pivot",ubj:"Upper ball joint",top:"Strut top mount",sbot:"Strut axis lower point",sl:"Spring lower seat (on lower arm)",su:"Spring upper seat (body)"};
+const PTINFO={
+ wc:"Centre of the wheel bearing. Z equals the loaded tyre radius; Y is half the track.",
+ lci:"Front-view equivalent of the lower arm's inner pivot axis (where the axis through the front and rear bushes meets this section).",
+ lbj:"Outer joint of the lower arm on the knuckle. It is also the lower point of the steering axis.",
+ uci:"Front-view equivalent of the upper arm's inner pivot axis.",
+ ubj:"Outer joint of the upper arm. Upper point of the steering axis on a double wishbone.",
+ top:"Strut mount on the body. Upper point of the steering axis on a MacPherson.",
+ sbot:"Any point on the strut (damper) axis on the knuckle side, used to set the strut direction.",
+ sl:"Spring seat on the lower arm. Moves with the arm.",
+ su:"Spring seat on the body. Fixed."
+};
+const PTS={mac:["wc","lci","lbj","top","sbot"],sla:["wc","lci","lbj","uci","ubj","sl","su"]};
+const HP_DEF={
+ F:{type:"mac",cam:-0.5,pts:{wc:[0,800,330],lci:[0,380,215],lbj:[0,745,190],top:[-60,650,820],sbot:[0,700,440],uci:[0,450,460],ubj:[0,720,520],sl:[0,600,220],su:[0,580,500]}},
+ R:{type:"sla",cam:-1.0,pts:{wc:[0,800,330],lci:[0,350,175],lbj:[0,760,170],uci:[0,460,400],ubj:[0,715,460],sl:[0,640,180],su:[0,620,470],top:[0,640,800],sbot:[0,690,430]}}
+};
 const PRESETS={
  sedan:{M:2000,wf:48,L:2900,hcg:520,rr:330,G:79300,Sy:1400,phiD:5,
   F:{t:1600,mu:45,ks:32,mrs:0.95,kt:250,cb:2000,cr:4500,mrd:0.95,rc:80,d:24,di:0,la:800,a:200,e:40,mra:0.6,eta:85},
@@ -300,183 +437,401 @@ const PRESETS={
   F:{t:1640,mu:55,ks:38,mrs:0.95,kt:280,cb:2500,cr:5500,mrd:0.95,rc:90,d:28,di:17,la:820,a:210,e:40,mra:0.6,eta:85},
   R:{t:1650,mu:60,ks:90,mrs:0.72,kt:280,cb:4000,cr:9000,mrd:0.75,rc:140,d:21,di:0,la:820,a:210,e:40,mra:0.6,eta:85}}
 };
-const RANGES={f:[1.0,1.5],ratio:[1.05,1.2],z:[0.25,0.45],rg:[2.0,4.0],hop:[10,15],fosy:[1.5,1.9],fost:[0.9,1.3]};
+const RANGES={f:[1.0,1.5],ratio:[1.05,1.2],z:[0.25,0.45],rg:[2.0,4.0],hop:[10,15],fosy:[1.5,1.9],fost:[0.9,1.3],kpi:[8,15],cas:[3,7],scrub:[-10,30],trail:[10,35]};
+const clone=o=>JSON.parse(JSON.stringify(o));
 let S;
 try{S=JSON.parse(localStorage.getItem("susp-academy"))}catch(e){}
-if(!S||!S.F||S.F.cb===undefined)S=JSON.parse(JSON.stringify(PRESETS.sedan));
+if(!S||!S.F||S.F.cb===undefined)S=clone(PRESETS.sedan);
+if(!S.HP)S.HP=clone(HP_DEF);
+if(S.link===undefined)S.link=false;
 const save=()=>{try{localStorage.setItem("susp-academy",JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const D=Math.PI/180;
+const fmt=(x,n=2)=>isFinite(x)?Number(x).toLocaleString("en-US",{minimumFractionDigits:n,maximumFractionDigits:n}):"–";
+const flag=(v,[lo,hi])=>!isFinite(v)?"":v<lo?'<span class="st lo">Low</span>':v>hi?'<span class="st hi">High</span>':'<span class="st ok">In range</span>';
+const perDeg=x=>x/1000*D;
 
+/* ---------- 2D kinematics (front view, Y–Z plane) ---------- */
+const yz=p=>[p[1],p[2]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]], add=(a,b)=>[a[0]+b[0],a[1]+b[1]];
+const vlen=v=>Math.hypot(v[0],v[1]), vang=v=>Math.atan2(v[1],v[0]);
+const cross=(a,b)=>a[0]*b[1]-a[1]*b[0];
+const rotv=(v,a)=>[v[0]*Math.cos(a)-v[1]*Math.sin(a),v[0]*Math.sin(a)+v[1]*Math.cos(a)];
+const rotp=(p,c,a)=>add(c,rotv(sub(p,c),a));
+function lineX(p1,d1,p2,d2){const den=cross(d1,d2);if(Math.abs(den)<1e-9)return null;const t=cross(sub(p2,p1),d2)/den;return [p1[0]+d1[0]*t,p1[1]+d1[1]*t];}
+function circX(c1,r1,c2,r2,near){
+ const d=vlen(sub(c2,c1));if(d===0||d>r1+r2||d<Math.abs(r1-r2))return null;
+ const a=(r1*r1-r2*r2+d*d)/(2*d),h=Math.sqrt(Math.max(0,r1*r1-a*a));
+ const ex=[(c2[0]-c1[0])/d,(c2[1]-c1[1])/d],m=[c1[0]+a*ex[0],c1[1]+a*ex[1]];
+ const p1=[m[0]-h*ex[1],m[1]+h*ex[0]],p2=[m[0]+h*ex[1],m[1]-h*ex[0]];
+ return vlen(sub(p1,near))<vlen(sub(p2,near))?p1:p2;
+}
+function pose(hp,del){
+ const P=hp.pts,L=yz(P.lci),B0=yz(P.lbj),W0=yz(P.wc);
+ const B=rotp(B0,L,del);let r;const o={B,L};
+ if(hp.type==="sla"){
+  const UI=yz(P.uci),U0=yz(P.ubj);
+  const U=circX(UI,vlen(sub(U0,UI)),B,vlen(sub(U0,B0)),U0);if(!U)return null;
+  r=vang(sub(U,B))-vang(sub(U0,B0));o.U=U;o.UI=UI;
+  o.IC=lineX(L,sub(B,L),UI,sub(U,UI));
+  o.SL=rotp(yz(P.sl),L,del);o.SU=yz(P.su);o.spr=vlen(sub(o.SU,o.SL));
+ }else{
+  const T=yz(P.top),S0=yz(P.sbot),u0=sub(T,S0),n0=vlen(u0);if(n0===0)return null;
+  const uu=[u0[0]/n0,u0[1]/n0],dd=cross(uu,sub(B0,T));
+  const s0=Math.atan2(Math.sin(vang(sub(B0,T))-vang(uu)),Math.cos(vang(sub(B0,T))-vang(uu)));
+  const v=sub(B,T),Dv=vlen(v);if(Math.abs(dd)>Dv)return null;
+  const a=Math.asin(dd/Dv),k=Math.abs(s0)>Math.PI/2?(dd>=0?Math.PI-a:-Math.PI-a):a;
+  const beta=vang(v)-k;r=beta-vang(uu);
+  const u=[Math.cos(beta),Math.sin(beta)];
+  o.T=T;o.S=add(B,rotv(sub(S0,B0),r));o.u=u;
+  o.IC=lineX(L,sub(B,L),T,[-u[1],u[0]]);
+  o.spr=vlen(sub(T,o.S));
+ }
+ o.W=add(B,rotv(sub(W0,B0),r));o.r=r;return o;
+}
+function kin(hp,travel){
+ const W0=yz(hp.pts.wc),L=yz(hp.pts.lci),B0=yz(hp.pts.lbj);
+ let del=travel/Math.max(50,Math.abs(B0[0]-L[0])),p=null;
+ for(let i=0;i<40;i++){
+  p=pose(hp,del);if(!p)return null;
+  const e=p.W[1]-W0[1]-travel;if(Math.abs(e)<1e-7)break;
+  const p2=pose(hp,del+1e-6);if(!p2)return null;
+  const der=(p2.W[1]-p.W[1])/1e-6;if(Math.abs(der)<1e-9)return null;
+  del-=e/der;
+ }
+ p=pose(hp,del);if(!p||Math.abs(p.W[1]-W0[1]-travel)>0.01)return null;
+ const P=[p.W[0],travel];p.P=P;p.travel=travel;
+ if(p.IC&&Math.abs(p.IC[0]-P[0])>1e-6){p.RC=P[1]+(p.IC[1]-P[1])*(0-P[0])/(p.IC[0]-P[0]);}
+ else{const dir=sub(p.B,L);p.RC=P[1]+dir[1]*(0-P[0])/dir[0];}
+ p.RCh=p.RC-travel;p.cam=hp.cam-p.r/D;
+ return p;
+}
+function kinStatic(hp){
+ const p0=kin(hp,0),pu=kin(hp,1),pd=kin(hp,-1);
+ if(!p0||!pu||!pd)return null;
+ const P=hp.pts,lo=P.lbj,up=hp.type==="sla"?P.ubj:P.top;
+ const dz=up[2]-lo[2],t=(0-lo[2])/dz;
+ const yg=lo[1]+t*(up[1]-lo[1]),xg=lo[0]+t*(up[0]-lo[0]);
+ return {p0,mr:(pd.spr-pu.spr)/2,rc:p0.RCh,track:2*P.wc[1],
+  cg:(pu.cam-pd.cam)/2*10,tc:(pu.W[0]-pd.W[0])/2*2*10,
+  kpi:Math.atan2(lo[1]-up[1],dz)/D,cas:Math.atan2(lo[0]-up[0],dz)/D,
+  scrub:P.wc[1]-yg,trail:xg-P.wc[0],ic:p0.IC};
+}
+
+/* ---------- vehicle model ---------- */
+function effParams(Sx){
+ const pF=Object.assign({},Sx.F),pR=Object.assign({},Sx.R),ks={F:null,R:null};
+ if(Sx.link){
+  for(const [ax,p] of [["F",pF],["R",pR]]){
+   const k=kinStatic(Sx.HP[ax]);ks[ax]=k;
+   if(k&&isFinite(k.mr)&&isFinite(k.rc)){p.t=k.track;p.rc=k.rc;p.mrs=k.mr;if(Sx.HP[ax].type==="mac")p.mrd=k.mr;}
+  }
+ }
+ return {pF,pR,ks};
+}
+function linkedKeys(ax){return S.link?(S.HP[ax].type==="mac"?["t","rc","mrs","mrd"]:["t","rc","mrs"]):[]}
+function axle(Sx,p,mAxle){
+ const ms=mAxle/2-p.mu,kw=p.ks*p.mrs**2,kride=kw*p.kt/(kw+p.kt);
+ const f=Math.sqrt(kride*1000/ms)/(2*Math.PI),defl=ms*9.81/kride;
+ const ccrit=2*Math.sqrt(kride*1000*ms);
+ const cbw=p.cb*p.mrd**2,crw=p.cr*p.mrd**2;
+ const zb=cbw/ccrit,zr=crw/ccrit,za=(zb+zr)/2;
+ const hop=Math.sqrt((kw+p.kt)*1000/p.mu)/(2*Math.PI);
+ const J=Math.PI*(p.d**4-p.di**4)/32,Kth=Sx.G*J/p.la;
+ const Karb=Kth*p.mra**2*p.t**2/p.a**2*(p.eta/100);
+ const Ks=kw*p.t**2/2,Kt=p.kt*p.t**2/2,Kax=1/(1/(Ks+Karb)+1/Kt);
+ const th=p.mra*Sx.phiD*D*p.t/p.a,T=Kth*th*(p.eta/100),tau=T*(p.d/2)/J;
+ const Fl=T/p.a,Mb=Fl*p.e,sb=Mb*(p.d/2)/(J/2),s1=sb/2+Math.sqrt((sb/2)**2+tau**2);
+ return {ms,mAxle,mu:p.mu,kt:p.kt,kw,kride,f,defl,ccrit,cbw,crw,zb,zr,za,hop,J,Kth,Karb,Ks,Kt,Kax,th,T,tau,Fl,Mb,sb,s1,fosy:Sx.Sy/s1,fost:0.577*Sx.Sy/tau};
+}
+function compute(Sx,ay){
+ const {pF,pR,ks}=effParams(Sx);
+ const mF=Sx.M*Sx.wf/100,mR=Sx.M-mF;
+ const F=axle(Sx,pF,mF),Rr=axle(Sx,pR,mR);
+ const msTot=Sx.M-2*pF.mu-2*pR.mu,xcg=Sx.L*(1-Sx.wf/100);
+ const hra=pF.rc+(pR.rc-pF.rc)*xcg/Sx.L,h=Sx.hcg-hra,mgh=msTot*9.81*h;
+ const Ktot=F.Kax+Rr.Kax,rgRad=mgh/(Ktot-mgh),rg=rgRad/D,rsd=F.Kax/Ktot*100,ratio=Rr.f/F.f;
+ const llt=(A,p)=>{const el=msTot*h*A.Kax/Ktot,ge=2*A.ms*p.rc,un=2*p.mu*Sx.rr;
+  return {el:ay*9.81*el/p.t,ge:ay*9.81*ge/p.t,un:ay*9.81*un/p.t,tot:ay*9.81*(el+ge+un)/p.t,stat:A.mAxle*9.81/2,perG:9.81*(el+ge+un)/p.t}};
+ const LF=llt(F,pF),LR=llt(Rr,pR);
+ return {F,Rr,pF,pR,ks,LF,LR,rg,rgRad,rsd,ratio,h,hra,xcg,msTot,mgh,Ktot,lltd:LF.perG/(LF.perG+LR.perG)*100,ay,mF,mR};
+}
+
+/* ---------- inputs ---------- */
 function buildInputs(){
  let h=`<tr><th>Parameter</th><th class="f">Front</th><th class="r">Rear</th><th></th></tr>`;
+ if(S.link)h+=`<tr><td colspan="4"><div class="linknote">Dashed inputs come from the Hardpoints tab.</div></td></tr>`;
+ const lk={F:linkedKeys("F"),R:linkedKeys("R")};
  for(const [k,l,u,ax] of INPUTS){
   if(!l){h+=`<tr class="grp"><td colspan="4">${k}</td></tr>`;continue}
   const lab=`<button class="pi" data-info="${k}" aria-expanded="false">${l}</button>`;
-  if(ax) h+=`<tr><td>${lab}</td><td><input type="number" step="any" aria-label="Front ${l}" data-ax="F" data-k="${k}" value="${S.F[k]}"></td><td><input type="number" step="any" aria-label="Rear ${l}" data-ax="R" data-k="${k}" value="${S.R[k]}"></td><td class="u">${u}</td></tr>`;
+  if(ax){const cell=a=>`<td><input type="number" step="any" aria-label="${a==="F"?"Front":"Rear"} ${l}" data-ax="${a}" data-k="${k}" value="${S[a][k]}" ${lk[a].includes(k)?"disabled":""}></td>`;
+   h+=`<tr><td>${lab}</td>${cell("F")}${cell("R")}<td class="u">${u}</td></tr>`;}
   else h+=`<tr><td>${lab}</td><td colspan="2"><input type="number" step="any" aria-label="${l}" data-k="${k}" value="${S[k]}"></td><td class="u">${u}</td></tr>`;
  }
- const t=document.getElementById("tIn"); t.innerHTML=h;
+ const t=$("tIn");t.innerHTML=h;
  t.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>{
-  const v=parseFloat(i.value); if(isNaN(v))return;
-  if(i.dataset.ax)S[i.dataset.ax][i.dataset.k]=v; else S[i.dataset.k]=v;
-  save(); calc();
+  const v=parseFloat(i.value);if(isNaN(v))return;
+  if(i.dataset.ax)S[i.dataset.ax][i.dataset.k]=v;else S[i.dataset.k]=v;
+  save();calc();
  }));
+ bindInfo(t,k=>INFO[k]);
+}
+function bindInfo(t,get){
  t.querySelectorAll("button.pi").forEach(b=>b.addEventListener("click",()=>{
-  const row=b.closest("tr"), nx=row.nextElementSibling;
+  const row=b.closest("tr"),nx=row.nextElementSibling;
   if(nx&&nx.classList.contains("info")){nx.remove();b.setAttribute("aria-expanded","false");return}
-  const [what,typ,eff]=INFO[b.dataset.info];
-  const r=document.createElement("tr"); r.className="info";
-  r.innerHTML=`<td colspan="4">${what}<br><b>Typical:</b> ${typ}<br><b>Effect:</b> ${eff}</td>`;
-  row.after(r); b.setAttribute("aria-expanded","true");
+  const inf=get(b.dataset.info),r=document.createElement("tr");r.className="info";
+  r.innerHTML=Array.isArray(inf)?`<td colspan="5">${inf[0]}<br><b>Typical:</b> ${inf[1]}<br><b>Effect:</b> ${inf[2]}</td>`:`<td colspan="5">${inf}</td>`;
+  row.after(r);b.setAttribute("aria-expanded","true");
  }));
 }
-
-const D=Math.PI/180;
-function axle(p,mAxle){
- const ms=mAxle/2-p.mu;
- const kw=p.ks*p.mrs**2;
- const kride=kw*p.kt/(kw+p.kt);
- const f=Math.sqrt(kride*1000/ms)/(2*Math.PI);
- const defl=ms*9.81/kride;
- const ccrit=2*Math.sqrt(kride*1000*ms);
- const zb=p.cb*p.mrd**2/ccrit, zr=p.cr*p.mrd**2/ccrit, za=(zb+zr)/2;
- const hop=Math.sqrt((kw+p.kt)*1000/p.mu)/(2*Math.PI);
- const J=Math.PI*(p.d**4-p.di**4)/32, Kth=S.G*J/p.la;
- const Karb=Kth*p.mra**2*p.t**2/p.a**2*(p.eta/100);
- const Ks=kw*p.t**2/2, Kt=p.kt*p.t**2/2;
- const Kax=1/(1/(Ks+Karb)+1/Kt);
- // stress
- const phi=S.phiD*D;
- const th=p.mra*phi*p.t/p.a;
- const T=Kth*th*(p.eta/100);
- const tau=T*(p.d/2)/J;
- const Fl=T/p.a, Mb=Fl*p.e, sb=Mb*(p.d/2)/(J/2);
- const s1=sb/2+Math.sqrt((sb/2)**2+tau**2);
- const fosy=S.Sy/s1, fost=0.577*S.Sy/tau;
- return {ms,mAxle,kw,kride,f,defl,ccrit,zb,zr,za,hop,J,Kth,Karb,Ks,Kt,Kax,th,T,tau,Fl,Mb,sb,s1,fosy,fost};
+function syncLinkedInputs(){
+ document.querySelectorAll("#tIn input:disabled").forEach(i=>{
+  const p=i.dataset.ax==="F"?R.pF:R.pR,v=p[i.dataset.k];
+  i.value=["mrs","mrd"].includes(i.dataset.k)?v.toFixed(3):v.toFixed(1);
+ });
 }
-const fmt=(x,n=2)=>isFinite(x)?Number(x).toLocaleString("en-US",{minimumFractionDigits:n,maximumFractionDigits:n}):"–";
-const flag=(v,[lo,hi])=>v<lo?'<span class="st lo">Low</span>':v>hi?'<span class="st hi">High</span>':'<span class="st ok">In range</span>';
-const perDeg=x=>x/1000*D; // N·mm/rad → N·m/deg
 
+/* ---------- charts (pure SVG, works offline) ---------- */
+function nice(lo,hi,n=5){const r=hi-lo||1,st0=Math.pow(10,Math.floor(Math.log10(r/n))),m=r/n/st0,st=st0*(m<1.5?1:m<3?2:m<7?5:10);
+ const out=[];for(let v=Math.ceil(lo/st)*st;v<=hi+1e-9;v+=st)out.push(+v.toFixed(10));return out;}
+function chart(o){
+ const W=640,H=o.h||280,ml=58,mr=14,mt=14,mb=44,pw=W-ml-mr,ph=H-mt-mb;
+ const tx=x=>o.logX?Math.log10(x):x;
+ let xs=[],ys=[];o.series.forEach(s=>s.pts.forEach(([x,y])=>{if(isFinite(x)&&isFinite(y)){xs.push(tx(x));ys.push(y)}}));
+ if(!xs.length)return `<p class="warn">No valid data for this graph. Check the inputs.</p>`;
+ let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+ if(o.y0!==undefined)y0=Math.min(y0,o.y0);
+ if(y1-y0<1e-9){y0-=1;y1+=1}const py=(y1-y0)*0.08;y0-=py;y1+=py;
+ const X=x=>ml+(tx(x)-x0)/(x1-x0||1)*pw,Y=y=>mt+(y1-y)/(y1-y0)*ph;
+ let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria||"chart"}">`;
+ if(o.band){const a=Math.max(y0,o.band[0]),b=Math.min(y1,o.band[1]);if(b>a)g+=`<rect x="${ml}" y="${Y(b)}" width="${pw}" height="${Y(a)-Y(b)}" fill="var(--flag)" opacity=".16"/>`;}
+ nice(y0,y1).forEach(v=>{g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--rule)"/><text x="${ml-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--steel)">${+v.toFixed(4)}</text>`});
+ const xt=o.logX?[0.5,1,2,5,10,20,50].filter(v=>tx(v)>=x0-1e-9&&tx(v)<=x1+1e-9):nice(x0,x1);
+ xt.forEach(v=>{g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${mt+ph}" stroke="var(--rule)" opacity=".6"/><text x="${X(v)}" y="${mt+ph+16}" text-anchor="middle" font-size="12" fill="var(--steel)">${+(+v).toFixed(4)}</text>`});
+ if(y0<0&&y1>0)g+=`<line x1="${ml}" x2="${ml+pw}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--steel)"/>`;
+ (o.vlines||[]).forEach(v=>{if(isFinite(v))g+=`<line x1="${X(v)}" x2="${X(v)}" y1="${mt}" y2="${mt+ph}" stroke="var(--ink)" stroke-dasharray="4 4"/>`});
+ o.series.forEach(s=>{let d="",pen=false;s.pts.forEach(([x,y])=>{if(isFinite(x)&&isFinite(y)){d+=(pen?"L":"M")+X(x).toFixed(1)+" "+Y(y).toFixed(1);pen=true}else pen=false});
+  g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.w||2.2}" ${s.dash?`stroke-dasharray="${s.dash}"`:""}/>`});
+ g+=`<text x="${ml+pw/2}" y="${H-6}" text-anchor="middle" font-size="13" fill="var(--steel)">${o.xl}</text>`;
+ g+=`<text transform="translate(14 ${mt+ph/2}) rotate(-90)" text-anchor="middle" font-size="13" fill="var(--steel)">${o.yl}</text>`;
+ let lx=ml+8;o.series.forEach(s=>{if(!s.name)return;g+=`<line x1="${lx}" x2="${lx+18}" y1="${mt+12}" y2="${mt+12}" stroke="${s.color}" stroke-width="3" ${s.dash?`stroke-dasharray="${s.dash}"`:""}/><text x="${lx+23}" y="${mt+16}" font-size="12" fill="var(--ink)">${s.name}</text>`;lx+=34+s.name.length*6.4});
+ return g+"</svg>";
+}
+const CF="var(--front)",CR="var(--rear)";
+
+/* ---------- calculate tab ---------- */
 let R;
 function calc(){
- const ay=parseFloat(document.getElementById("ay").value);
- const mF=S.M*S.wf/100, mR=S.M-mF;
- const F=axle(S.F,mF), Rr=axle(S.R,mR);
- const msTot=S.M-2*S.F.mu-2*S.R.mu;
- const xcg=S.L*(1-S.wf/100);
- const hra=S.F.rc+(S.R.rc-S.F.rc)*xcg/S.L;
- const h=S.hcg-hra;
- const mgh=msTot*9.81*h;
- const Ktot=F.Kax+Rr.Kax;
- const rgRad=mgh/(Ktot-mgh), rg=rgRad/D;
- const rsd=F.Kax/Ktot*100;
- const ratio=Rr.f/F.f;
- const llt=(A,p)=>{const el=msTot*h*A.Kax/Ktot, ge=2*A.ms*p.rc, un=2*p.mu*S.rr;
-   return {el:ay*9.81*el/p.t, ge:ay*9.81*ge/p.t, un:ay*9.81*un/p.t, tot:ay*9.81*(el+ge+un)/p.t, stat:A.mAxle*9.81/2}};
- const LF=llt(F,S.F), LR=llt(Rr,S.R);
- const lltd=LF.tot/(LF.tot+LR.tot)*100;
- R={F,Rr,LF,LR,rg,rgRad,rsd,ratio,h,hra,xcg,msTot,mgh,Ktot,lltd,ay,mF,mR};
-
- const set=(id,v,u)=>document.getElementById(id).innerHTML=`${v}<small>${u}</small>`;
- set("r_ff",fmt(F.f),"Hz"); set("r_fr",fmt(Rr.f),"Hz"); set("r_rg",fmt(rg),"°/g"); set("r_ll",ay>0?fmt(lltd,1):"–","%");
-
+ const ay=parseFloat($("ay").value);
+ R=compute(S,ay);
+ const {F,Rr,LF,LR,rg}=R;
+ const set=(id,v,u)=>$(id).innerHTML=`${v}<small>${u}</small>`;
+ set("r_ff",fmt(F.f),"Hz");set("r_fr",fmt(Rr.f),"Hz");set("r_rg",fmt(rg),"°/g");set("r_ll",fmt(R.lltd,1),"%");
  const row=(l,u,fv,rv,rng,n=2)=>`<tr><td>${l} <span class="u">${u}</span></td><td class="num">${fmt(fv,n)}</td><td>${rng?flag(fv,rng):""}</td><td class="num">${fmt(rv,n)}</td><td>${rng?flag(rv,rng):""}</td></tr>`;
  const one=(l,u,v,rng,n=2)=>`<tr><td>${l} <span class="u">${u}</span></td><td class="num" colspan="2">${fmt(v,n)}</td><td colspan="2">${rng?flag(v,rng):""}</td></tr>`;
  const g=t=>`<tr class="grp"><td colspan="5">${t}</td></tr>`;
- document.getElementById("tRes").innerHTML=
-  `<tr><th>Output</th><th class="f num">Front</th><th></th><th class="r num">Rear</th><th></th></tr>`+
-  g("Ride")+
-  row("Corner sprung mass","kg",F.ms,Rr.ms,null,0)+
-  row("Spring wheel rate","N/mm",F.kw,Rr.kw,null,1)+
-  row("Ride rate","N/mm",F.kride,Rr.kride,null,1)+
-  row("Static deflection","mm",F.defl,Rr.defl,null,0)+
-  row("Ride frequency","Hz",F.f,Rr.f,RANGES.f)+
-  row("Wheel hop frequency","Hz",F.hop,Rr.hop,RANGES.hop,1)+
-  one("Rear / front frequency ratio","–",ratio,RANGES.ratio)+
-  g("Damping")+
-  row("Critical damping","N·s/m",F.ccrit,Rr.ccrit,null,0)+
-  row("Damping ratio, bump","–",F.zb,Rr.zb,null)+
-  row("Damping ratio, rebound","–",F.zr,Rr.zr,null)+
-  row("Damping ratio, average","–",F.za,Rr.za,RANGES.z)+
-  g("Roll")+
-  row("Roll stiffness, springs","N·m/°",perDeg(F.Ks),perDeg(Rr.Ks),null,0)+
-  row("Roll stiffness, ARB","N·m/°",perDeg(F.Karb),perDeg(Rr.Karb),null,0)+
-  row("Axle roll stiffness (with tyre)","N·m/°",perDeg(F.Kax),perDeg(Rr.Kax),null,0)+
-  one("Roll axis height at CG","mm",hra,null,0)+
-  one("CG height above roll axis","mm",h,null,0)+
-  one("Front roll stiffness share","%",rsd,null,1)+
-  one("Roll gradient","°/g",rg,RANGES.rg)+
-  one(`Body roll at ${ay.toFixed(2)} g`,"°",rg*ay,null)+
-  g(`Load transfer at ${ay.toFixed(2)} g`)+
-  row("Elastic","N",LF.el,LR.el,null,0)+
-  row("Geometric (roll centre)","N",LF.ge,LR.ge,null,0)+
-  row("Unsprung","N",LF.un,LR.un,null,0)+
-  row("Total per axle","N",LF.tot,LR.tot,null,0)+
-  row("Inner wheel load remaining","%",(1-LF.tot/LF.stat)*100,(1-LR.tot/LR.stat)*100,null,0)+
-  one("Front load transfer share","%",lltd,null,1)+
-  one("Front weight share (reference)","%",S.wf,null,1)+
-  g(`ARB stress at ${S.phiD}° roll`)+
-  row("Bar torsional rate","N·m/rad",F.Kth/1000,Rr.Kth/1000,null,0)+
-  row("Bar twist","°",F.th/D,Rr.th/D,null,1)+
-  row("Torque","N·m",F.T/1000,Rr.T/1000,null,0)+
-  row("Link force","N",F.Fl,Rr.Fl,null,0)+
-  row("Torsional shear τ","MPa",F.tau,Rr.tau,null,0)+
-  row("Bending stress σ","MPa",F.sb,Rr.sb,null,0)+
-  row("Max principal stress σ₁","MPa",F.s1,Rr.s1,null,0)+
-  row("Yield FOS","–",F.fosy,Rr.fosy,RANGES.fosy)+
-  row("Torsional FOS","–",F.fost,Rr.fost,RANGES.fost);
- draw(); worked();
+ $("tRes").innerHTML=`<tr><th>Output</th><th class="f num">Front</th><th></th><th class="r num">Rear</th><th></th></tr>`+
+  g("Ride")+row("Corner sprung mass","kg",F.ms,Rr.ms,null,0)+row("Spring wheel rate","N/mm",F.kw,Rr.kw,null,1)+row("Ride rate","N/mm",F.kride,Rr.kride,null,1)+
+  row("Static deflection","mm",F.defl,Rr.defl,null,0)+row("Ride frequency","Hz",F.f,Rr.f,RANGES.f)+row("Wheel hop frequency","Hz",F.hop,Rr.hop,RANGES.hop,1)+
+  one("Rear / front frequency ratio","–",R.ratio,RANGES.ratio)+
+  g("Damping")+row("Critical damping","N·s/m",F.ccrit,Rr.ccrit,null,0)+row("Damping ratio, bump","–",F.zb,Rr.zb)+row("Damping ratio, rebound","–",F.zr,Rr.zr)+row("Damping ratio, average","–",F.za,Rr.za,RANGES.z)+
+  g("Roll")+row("Roll stiffness, springs","N·m/°",perDeg(F.Ks),perDeg(Rr.Ks),null,0)+row("Roll stiffness, ARB","N·m/°",perDeg(F.Karb),perDeg(Rr.Karb),null,0)+
+  row("Axle roll stiffness (with tyre)","N·m/°",perDeg(F.Kax),perDeg(Rr.Kax),null,0)+one("Roll axis height at CG","mm",R.hra,null,0)+one("CG height above roll axis","mm",R.h,null,0)+
+  one("Front roll stiffness share","%",R.rsd,null,1)+one("Roll gradient","°/g",rg,RANGES.rg)+one(`Body roll at ${ay.toFixed(2)} g`,"°",rg*ay)+
+  g(`Load transfer at ${ay.toFixed(2)} g`)+row("Elastic","N",LF.el,LR.el,null,0)+row("Geometric (roll centre)","N",LF.ge,LR.ge,null,0)+row("Unsprung","N",LF.un,LR.un,null,0)+
+  row("Total per axle","N",LF.tot,LR.tot,null,0)+row("Inner wheel load remaining","%",(1-LF.tot/LF.stat)*100,(1-LR.tot/LR.stat)*100,null,0)+
+  one("Front load transfer share","%",R.lltd,null,1)+one("Front weight share (reference)","%",S.wf,null,1)+
+  g(`ARB stress at ${S.phiD}° roll`)+row("Bar torsional rate","N·m/rad",F.Kth/1000,Rr.Kth/1000,null,0)+row("Bar twist","°",F.th/D,Rr.th/D,null,1)+
+  row("Torque","N·m",F.T/1000,Rr.T/1000,null,0)+row("Link force","N",F.Fl,Rr.Fl,null,0)+row("Torsional shear τ","MPa",F.tau,Rr.tau,null,0)+
+  row("Bending stress σ","MPa",F.sb,Rr.sb,null,0)+row("Max principal stress σ₁","MPa",F.s1,Rr.s1,null,0)+row("Yield FOS","–",F.fosy,Rr.fosy,RANGES.fosy)+row("Torsional FOS","–",F.fost,Rr.fost,RANGES.fost);
+ syncLinkedInputs();draw();worked();renderHP();renderGraphs();
 }
-
 function draw(){
- const ay=R.ay;
- document.getElementById("ayv").textContent=ay.toFixed(2)+" g";
+ const ay=R.ay;$("ayv").textContent=ay.toFixed(2)+" g";
  const phi=isFinite(R.rg)&&R.rg>0?R.rg*ay:0;
- const rcY=200-Math.min(60,R.hra/6), cgY=Math.max(70,200-S.hcg/6);
- document.getElementById("rcDot").setAttribute("cy",rcY);
- document.getElementById("cgDot").setAttribute("cy",cgY);
- const l=document.getElementById("cgLine"); l.setAttribute("y1",cgY); l.setAttribute("y2",rcY);
- const b=document.getElementById("bodyG");
- b.style.transformOrigin=`210px ${rcY}px`; b.style.transform=`rotate(${Math.min(phi*2.5,25)}deg)`;
- document.getElementById("rollTxt").textContent=`Body roll ${phi.toFixed(2)}° at ${ay.toFixed(2)} g (drawn ×2.5)`;
+ const rcY=200-Math.min(60,Math.max(0,R.hra)/6),cgY=Math.max(70,200-S.hcg/6);
+ $("rcDot").setAttribute("cy",rcY);$("cgDot").setAttribute("cy",cgY);
+ const l=$("cgLine");l.setAttribute("y1",cgY);l.setAttribute("y2",rcY);
+ const b=$("bodyG");b.style.transformOrigin=`210px ${rcY}px`;b.style.transform=`rotate(${Math.min(phi*2.5,25)}deg)`;
+ $("rollTxt").textContent=`Body roll ${phi.toFixed(2)}° at ${ay.toFixed(2)} g (drawn ×2.5)`;
 }
-
 function worked(){
- const F=R.F,p=S.F,Rr=R.Rr;
+ const F=R.F,p=R.pF,Rr=R.Rr;
  const st=(t,eq,res)=>`<div class="step"><b>${t}</b><br>${eq}<br><span class="res">${res}</span></div>`;
- document.getElementById("wsBody").innerHTML=
-  `<p class="note">Steps 1–7 use the front axle; the rear follows the same path. Steps 8–11 combine both axles.</p>`+
+ $("wsBody").innerHTML=`<p class="note">Steps 1–7 use the front axle; the rear follows the same path. Steps 8–11 combine both axles.${S.link?" Track, roll centre and motion ratios come from the hardpoints.":""}</p>`+
   st("1. Front corner sprung mass",`m<sub>s</sub> = ${fmt(S.M,0)} × ${S.wf}% / 2 − ${p.mu}`,`= ${fmt(F.ms,1)} kg`)+
-  st("2. Spring wheel rate",`k<sub>w</sub> = ${p.ks} × ${p.mrs}²`,`= ${fmt(F.kw,2)} N/mm`)+
+  st("2. Spring wheel rate",`k<sub>w</sub> = ${p.ks} × ${fmt(p.mrs,3)}²`,`= ${fmt(F.kw,2)} N/mm`)+
   st("3. Ride rate with tyre in series",`k<sub>ride</sub> = ${fmt(F.kw,2)} × ${p.kt} / (${fmt(F.kw,2)} + ${p.kt})`,`= ${fmt(F.kride,2)} N/mm = ${fmt(F.kride*1000,0)} N/m`)+
   st("4. Ride frequency",`f = √(${fmt(F.kride*1000,0)} / ${fmt(F.ms,1)}) / 2π`,`= ${fmt(F.f,3)} Hz &nbsp; (rear ${fmt(Rr.f,3)} Hz, ratio ${fmt(R.ratio,3)})`)+
-  st("5. Damping ratio (average of bump and rebound)",`c<sub>crit</sub> = 2√(${fmt(F.kride*1000,0)} × ${fmt(F.ms,1)}) = ${fmt(F.ccrit,0)} N·s/m<br>ζ = ((${p.cb} + ${p.cr}) / 2) × ${p.mrd}² / ${fmt(F.ccrit,0)}`,`= ${fmt(F.za,3)}`)+
+  st("5. Damping ratio (average of bump and rebound)",`c<sub>crit</sub> = 2√(${fmt(F.kride*1000,0)} × ${fmt(F.ms,1)}) = ${fmt(F.ccrit,0)} N·s/m<br>ζ = ((${p.cb} + ${p.cr}) / 2) × ${fmt(p.mrd,3)}² / ${fmt(F.ccrit,0)}`,`= ${fmt(F.za,3)}`)+
   st("6. ARB torsional rate",`J = π(${p.d}⁴ − ${p.di}⁴)/32 = ${fmt(F.J,0)} mm⁴<br>K<sub>θ</sub> = ${S.G} × ${fmt(F.J,0)} / ${p.la}`,`= ${fmt(F.Kth,0)} N·mm/rad`)+
-  st("7. Front axle roll stiffness",`K<sub>arb</sub> = ${fmt(F.Kth,0)} × ${p.mra}² × ${p.t}² / ${p.a}² × ${p.eta/100} = ${fmt(perDeg(F.Karb),0)} N·m/°<br>K<sub>s</sub> = ${fmt(F.kw,2)} × ${p.t}² / 2 = ${fmt(perDeg(F.Ks),0)} N·m/°<br>K<sub>t</sub> = ${p.kt} × ${p.t}² / 2 = ${fmt(perDeg(F.Kt),0)} N·m/°<br>K<sub>f</sub> = 1/(1/(K<sub>s</sub>+K<sub>arb</sub>) + 1/K<sub>t</sub>)`,`= ${fmt(perDeg(F.Kax),0)} N·m/° &nbsp; (rear ${fmt(perDeg(Rr.Kax),0)} N·m/°)`)+
-  st("8. Roll axis and roll moment arm",`x<sub>cg</sub> = ${S.L} × (1 − ${S.wf}%) = ${fmt(R.xcg,0)} mm<br>h<sub>ra</sub> = ${S.F.rc} + (${S.R.rc} − ${S.F.rc}) × ${fmt(R.xcg,0)}/${S.L} = ${fmt(R.hra,1)} mm<br>h = ${S.hcg} − ${fmt(R.hra,1)}`,`= ${fmt(R.h,1)} mm`)+
+  st("7. Front axle roll stiffness",`K<sub>arb</sub> = ${fmt(F.Kth,0)} × ${p.mra}² × ${fmt(p.t,0)}² / ${p.a}² × ${p.eta/100} = ${fmt(perDeg(F.Karb),0)} N·m/°<br>K<sub>s</sub> = ${fmt(F.kw,2)} × ${fmt(p.t,0)}² / 2 = ${fmt(perDeg(F.Ks),0)} N·m/°<br>K<sub>t</sub> = ${p.kt} × ${fmt(p.t,0)}² / 2 = ${fmt(perDeg(F.Kt),0)} N·m/°<br>K<sub>f</sub> = 1/(1/(K<sub>s</sub>+K<sub>arb</sub>) + 1/K<sub>t</sub>)`,`= ${fmt(perDeg(F.Kax),0)} N·m/° &nbsp; (rear ${fmt(perDeg(Rr.Kax),0)} N·m/°)`)+
+  st("8. Roll axis and roll moment arm",`x<sub>cg</sub> = ${S.L} × (1 − ${S.wf}%) = ${fmt(R.xcg,0)} mm<br>h<sub>ra</sub> = ${fmt(R.pF.rc,1)} + (${fmt(R.pR.rc,1)} − ${fmt(R.pF.rc,1)}) × ${fmt(R.xcg,0)}/${S.L} = ${fmt(R.hra,1)} mm<br>h = ${S.hcg} − ${fmt(R.hra,1)}`,`= ${fmt(R.h,1)} mm`)+
   st("9. Roll gradient",`m<sub>s</sub>·g·h = ${fmt(R.msTot,0)} × 9.81 × ${fmt(R.h,1)} = ${fmt(R.mgh/1e6,3)} ×10⁶ N·mm<br>φ/a<sub>y</sub> = ${fmt(R.mgh/1e6,3)} / (${fmt(R.Ktot/1e6,2)} − ${fmt(R.mgh/1e6,3)}) = ${fmt(R.rgRad,4)} rad/g`,`= ${fmt(R.rg,2)} °/g &nbsp; (front roll stiffness share ${fmt(R.rsd,1)}%)`)+
   st(`10. Front load transfer at ${R.ay.toFixed(2)} g`,`Elastic ${fmt(R.LF.el,0)} N + geometric ${fmt(R.LF.ge,0)} N + unsprung ${fmt(R.LF.un,0)} N`,`= ${fmt(R.LF.tot,0)} N &nbsp; (rear ${fmt(R.LR.tot,0)} N, front share ${fmt(R.lltd,1)}% vs ${S.wf}% weight)`)+
-  st(`11. Front ARB stress at ${S.phiD}° roll`,`θ = ${p.mra} × ${fmt(S.phiD*D,4)} × ${p.t} / ${p.a} = ${fmt(F.th,4)} rad<br>T = ${fmt(F.Kth,0)} × ${fmt(F.th,4)} × ${p.eta/100} = ${fmt(F.T,0)} N·mm<br>τ = ${fmt(F.T,0)} × ${p.d/2} / ${fmt(F.J,0)} = ${fmt(F.tau,0)} MPa<br>σ<sub>b</sub> = (${fmt(F.T,0)}/${p.a}) × ${p.e} × ${p.d/2} / ${fmt(F.J/2,0)} = ${fmt(F.sb,0)} MPa<br>σ<sub>1</sub> = ${fmt(F.sb/2,0)} + √(${fmt(F.sb/2,0)}² + ${fmt(F.tau,0)}²) = ${fmt(F.s1,0)} MPa`,`Yield FOS = ${S.Sy}/${fmt(F.s1,0)} = ${fmt(F.fosy,2)} &nbsp; Torsional FOS = 0.577×${S.Sy}/${fmt(F.tau,0)} = ${fmt(F.fost,2)}`);
+  st(`11. Front ARB stress at ${S.phiD}° roll`,`θ = ${p.mra} × ${fmt(S.phiD*D,4)} × ${fmt(p.t,0)} / ${p.a} = ${fmt(F.th,4)} rad<br>T = ${fmt(F.Kth,0)} × ${fmt(F.th,4)} × ${p.eta/100} = ${fmt(F.T,0)} N·mm<br>τ = ${fmt(F.T,0)} × ${p.d/2} / ${fmt(F.J,0)} = ${fmt(F.tau,0)} MPa<br>σ<sub>b</sub> = (${fmt(F.T,0)}/${p.a}) × ${p.e} × ${p.d/2} / ${fmt(F.J/2,0)} = ${fmt(F.sb,0)} MPa<br>σ<sub>1</sub> = ${fmt(F.sb/2,0)} + √(${fmt(F.sb/2,0)}² + ${fmt(F.tau,0)}²) = ${fmt(F.s1,0)} MPa`,`Yield FOS = ${S.Sy}/${fmt(F.s1,0)} = ${fmt(F.fosy,2)} &nbsp; Torsional FOS = 0.577×${S.Sy}/${fmt(F.tau,0)} = ${fmt(F.fost,2)}`)+
+  hpWorked();
+}
+function hpWorked(){
+ const hp=S.HP.F,k=kinStatic(hp);if(!k)return "";
+ const P=hp.pts,lo=P.lbj,up=hp.type==="sla"?P.ubj:P.top,ic=k.ic;
+ const st=(t,eq,res)=>`<div class="step"><b>${t}</b><br>${eq}<br><span class="res">${res}</span></div>`;
+ return st("12. Front roll centre from hardpoints",`Instant centre IC = (${ic?fmt(ic[0],0):"∞"}, ${ic?fmt(ic[1],0):"∞"}) mm in Y, Z<br>Line from contact patch (${fmt(P.wc[1],0)}, 0) through IC, evaluated at Y = 0`,`RC height = ${fmt(k.rc,1)} mm`)+
+  st("13. Front steering axis",`KPI = atan((${lo[1]} − ${up[1]}) / (${up[2]} − ${lo[2]})) = ${fmt(k.kpi,2)}°<br>Caster = atan((${lo[0]} − ${up[0]}) / (${up[2]} − ${lo[2]})) = ${fmt(k.cas,2)}°`,`Scrub radius ${fmt(k.scrub,1)} mm, mechanical trail ${fmt(k.trail,1)} mm`);
 }
 
+/* ---------- hardpoints tab ---------- */
+let hpAx="F";
+function buildHP(){
+ const hp=S.HP[hpAx];
+ $("hpF").setAttribute("aria-pressed",hpAx==="F");$("hpR").setAttribute("aria-pressed",hpAx==="R");
+ $("hpType").value=hp.type;$("hpCam").value=hp.cam;$("hpLink").checked=S.link;
+ $("fvTitle").textContent=(hpAx==="F"?"Front":"Rear")+" view, right-hand side";
+ let h=`<tr><th>Point</th><th class="num">X</th><th class="num">Y</th><th class="num">Z</th></tr>`;
+ for(const k of PTS[hp.type]){
+  h+=`<tr><td><button class="pi" data-info="${k}" aria-expanded="false">${PT[k]}</button></td>`+[0,1,2].map(i=>`<td><input type="number" step="any" aria-label="${PT[k]} ${"XYZ"[i]}" data-p="${k}" data-i="${i}" value="${hp.pts[k][i]}"></td>`).join("")+`</tr>`;
+ }
+ const t=$("tHP");t.innerHTML=h;
+ t.querySelectorAll("input").forEach(i=>i.addEventListener("input",()=>{const v=parseFloat(i.value);if(isNaN(v))return;S.HP[hpAx].pts[i.dataset.p][+i.dataset.i]=v;save();calc();}));
+ bindInfo(t,k=>PTINFO[k]);
+}
+function renderHP(){
+ const kF=kinStatic(S.HP.F),kR=kinStatic(S.HP.R);
+ const row=(l,u,a,b,n=1,rng,both)=>`<tr><td>${l} <span class="u">${u}</span></td><td class="num">${a!==undefined?fmt(a,n):"–"}</td><td>${rng&&a!==undefined?flag(a,rng):""}</td><td class="num">${b!==undefined?fmt(b,n):"–"}</td><td>${rng&&both&&b!==undefined?flag(b,rng):""}</td></tr>`;
+ const v=(k,f)=>k?f(k):undefined;
+ let h=`<tr><th>Result</th><th class="f num">Front</th><th></th><th class="r num">Rear</th><th></th></tr>`;
+ if(!kF||!kR)h+=`<tr><td colspan="5" class="warn">${!kF?"Front":"Rear"} linkage cannot be assembled near design height. Check that the points form a valid linkage.</td></tr>`;
+ h+=row("Track (from wheel centres)","mm",v(kF,k=>k.track),v(kR,k=>k.track),0)+
+  row("Roll centre height","mm",v(kF,k=>k.rc),v(kR,k=>k.rc),1)+
+  row("Spring motion ratio","–",v(kF,k=>k.mr),v(kR,k=>k.mr),3)+
+  row("Camber gain","°/10 mm bump",v(kF,k=>k.cg),v(kR,k=>k.cg),3)+
+  row("Track change","mm/10 mm bump",v(kF,k=>k.tc),v(kR,k=>k.tc),2)+
+  row("Kingpin inclination","°",v(kF,k=>k.kpi),v(kR,k=>k.kpi),2,RANGES.kpi)+
+  row("Caster","°",v(kF,k=>k.cas),v(kR,k=>k.cas),2,RANGES.cas)+
+  row("Scrub radius","mm",v(kF,k=>k.scrub),v(kR,k=>k.scrub),1,RANGES.scrub)+
+  row("Mechanical trail","mm",v(kF,k=>k.trail),v(kR,k=>k.trail),1,RANGES.trail);
+ $("tHPres").innerHTML=h+`<tr><td colspan="5" class="u">Steering axis ranges are checked on the front (steered) axle only.</td></tr>`;
+ const sw=hp=>{const out=[];for(let t=-80;t<=80;t+=4){const p=kin(hp,t);out.push(p?{t,p}:{t,p:null})}return out};
+ const sF=sw(S.HP.F),sR=sw(S.HP.R);
+ const mrc=s=>s.map(({t})=>{const a=kin(s.hp,t-1),b=kin(s.hp,t+1);return [t,a&&b?(a.spr-b.spr)/2:NaN]});
+ sF.hp=S.HP.F;sR.hp=S.HP.R;
+ const ser=(fn)=>[{name:"Front",color:CF,pts:sF.map(o=>[o.t,o.p?fn(o.p,S.HP.F):NaN])},{name:"Rear",color:CR,pts:sR.map(o=>[o.t,o.p?fn(o.p,S.HP.R):NaN])}];
+ const tv=parseFloat($("trav").value);
+ $("gCam").innerHTML=chart({series:ser(p=>p.cam),xl:"Wheel travel (mm), bump +",yl:"Camber (°)",vlines:[tv],h:240});
+ $("gRC").innerHTML=chart({series:ser(p=>p.RCh),xl:"Wheel travel (mm), bump +",yl:"Roll centre (mm)",vlines:[tv],h:240});
+ $("gTrk").innerHTML=chart({series:ser((p,hp)=>2*(p.W[0]-hp.pts.wc[1])),xl:"Wheel travel (mm), bump +",yl:"Track change (mm)",vlines:[tv],h:240});
+ $("gMR").innerHTML=chart({series:[{name:"Front",color:CF,pts:mrc(sF)},{name:"Rear",color:CR,pts:mrc(sR)}],xl:"Wheel travel (mm), bump +",yl:"Motion ratio",vlines:[tv],h:240});
+ frontView();
+}
+function frontView(){
+ const hp=S.HP[hpAx],tv=parseFloat($("trav").value);$("travv").textContent=tv+" mm";
+ const p=kin(hp,tv);
+ if(!p){$("fv").innerHTML=`<p class="warn">The linkage cannot reach ${tv} mm of travel with these hardpoints.</p>`;return}
+ const s=0.42,X=y=>20+(y+100)*s,Y=z=>425-(z+80)*s,pt=a=>`${X(a[0]).toFixed(1)},${Y(a[1]).toFixed(1)}`;
+ const Rl=hp.pts.wc[2],cam=p.cam*D;
+ const corners=[[-110,-Rl],[110,-Rl],[110,Rl],[-110,Rl]].map(c=>add(p.W,rotv(c,-cam)));
+ const ln=(a,b,c,w,dash)=>`<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="${c}" stroke-width="${w}" ${dash?`stroke-dasharray="${dash}"`:""} stroke-linecap="round"/>`;
+ const dot=(a,c,r=4.5)=>`<circle cx="${X(a[0])}" cy="${Y(a[1])}" r="${r}" fill="${c}" stroke="var(--ink)"/>`;
+ let g=`<svg viewBox="0 0 560 440" role="img" aria-label="Front view of the linkage at ${tv} mm travel">`;
+ g+=ln([0,-80],[0,1000],"var(--steel)",1,"6 5")+`<text x="${X(0)+4}" y="14" font-size="12" fill="var(--steel)">Vehicle centreline</text>`;
+ g+=ln([-100,tv],[1150,tv],"var(--steel)",2);
+ g+=`<polygon points="${corners.map(pt).join(" ")}" fill="var(--tyre)" opacity=".85"/>`;
+ if(p.IC){g+=ln(p.P,p.IC,"var(--flag)",1.2,"5 4")+ln(p.L,p.IC,"var(--steel)",1,"2 4");
+  if(hp.type==="sla")g+=ln(p.UI,p.IC,"var(--steel)",1,"2 4");else g+=ln(p.T,p.IC,"var(--steel)",1,"2 4");}
+ g+=ln(p.L,p.B,"var(--front)",5);
+ if(hp.type==="sla"){g+=ln(p.UI,p.U,"var(--front)",5)+ln(p.B,p.U,"var(--ink)",4)+ln(p.U,p.W,"var(--ink)",3)+ln(p.B,p.W,"var(--ink)",3)+ln(p.SL,p.SU,"var(--rear)",7,"3 3")+dot(p.UI,"var(--panel)")+dot(p.U,"var(--flag)")+dot(p.SU,"var(--panel)",3.5);}
+ else{const top2=add(p.S,[p.u[0]*vlen(sub(p.T,p.S))*0.55,p.u[1]*vlen(sub(p.T,p.S))*0.55]);
+  g+=ln(p.S,top2,"var(--ink)",9)+ln(top2,p.T,"var(--steel)",4)+ln(p.B,p.S,"var(--ink)",4)+ln(p.S,p.W,"var(--ink)",3)+ln(p.B,p.W,"var(--ink)",3)+dot(p.T,"var(--panel)");}
+ g+=dot(p.L,"var(--panel)")+dot(p.B,"var(--flag)")+dot(p.W,"var(--panel)",5);
+ g+=`<circle cx="${X(0)}" cy="${Y(p.RC)}" r="6" fill="var(--flag)" stroke="var(--ink)" stroke-width="1.5"/>`;
+ g+=`<text x="${X(0)+10}" y="${Y(p.RC)+4}" font-size="13" fill="var(--ink)">RC ${fmt(p.RCh,0)} mm</text>`;
+ g+=`<text x="${X(1150)-4}" y="${Y(tv)-6}" text-anchor="end" font-size="13" fill="var(--ink)">Camber ${fmt(p.cam,2)}°</text>`;
+ $("fv").innerHTML=g+"</svg>"+(p.IC&&(Math.abs(p.IC[0])>3000)?`<p class="note">The instant centre is ${fmt(p.IC[0]/1000,1)} m away, beyond the drawing.</p>`:"");
+}
+
+/* ---------- graphs tab ---------- */
+function cmul(a,b){return [a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]]}
+function cdiv(a,b){const d=b[0]*b[0]+b[1]*b[1];return [(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d]}
+function trans(A){
+ const ms=A.ms,mu=A.mu,k=A.kw*1000,kt=A.kt*1000,c=(A.cbw+A.crw)/2,out=[];
+ for(let i=0;i<=160;i++){const f=Math.pow(10,Math.log10(0.4)+i*(Math.log10(30)-Math.log10(0.4))/160),w=2*Math.PI*f;
+  const a11=[k-w*w*ms,w*c],a12=[-k,-w*c],a22=[k+kt-w*w*mu,w*c];
+  const det=sub(cmul(a11,a22),cmul(a12,a12)),xs=cdiv([-a12[0]*kt,-a12[1]*kt],det);
+  out.push([f,Math.hypot(xs[0],xs[1])]);}
+ return out;
+}
+function stepSim(A,delay,h,Tend){
+ const ms=A.ms,mu=A.mu,k=A.kw*1000,kt=A.kt*1000,cb=A.cbw,cr=A.crw,dt=2e-4;
+ let xs=0,vs=0,xu=0,vu=0;const out=[];
+ for(let i=0,n=Math.round(Tend/dt);i<=n;i++){const t=i*dt;
+  const r=t<delay?0:t<delay+0.02?h*(t-delay)/0.02:h;
+  const vr=vu-vs,c=vr>0?cb:cr,Fs=k*(xu-xs)+c*vr;
+  vs+=Fs/ms*dt;vu+=(-Fs+kt*(r-xu))/mu*dt;xs+=vs*dt;xu+=vu*dt;
+  if(i%25===0)out.push([t,xs*1000]);}
+ return out;
+}
+const SENS_OUT=[
+ ["Front ride frequency (Hz)",r=>r.F.f,"f"],["Rear ride frequency (Hz)",r=>r.Rr.f,"f"],["Rear / front frequency ratio",r=>r.ratio,"ratio"],
+ ["Front damping ratio, average",r=>r.F.za,"z"],["Rear damping ratio, average",r=>r.Rr.za,"z"],
+ ["Front wheel hop frequency (Hz)",r=>r.F.hop,"hop"],["Roll gradient (°/g)",r=>r.rg,"rg"],
+ ["Front roll stiffness share (%)",r=>r.rsd],["Front load transfer share (%)",r=>r.lltd],
+ ["Front ARB yield FOS",r=>r.F.fosy,"fosy"],["Rear ARB yield FOS",r=>r.Rr.fosy,"fosy"],
+ ["Front ARB torsional FOS",r=>r.F.fost,"fost"],["Rear ARB torsional FOS",r=>r.Rr.fost,"fost"]
+];
+function buildSens(){
+ let o="";for(const [k,l,u,ax] of INPUTS){if(!l)continue;if(ax){o+=`<option value="F.${k}">Front: ${l} (${u})</option><option value="R.${k}">Rear: ${l} (${u})</option>`}else o+=`<option value="${k}">${l} (${u})</option>`}
+ $("sensP").innerHTML=o;$("sensP").value="F.d";
+ $("sensO").innerHTML=SENS_OUT.map((x,i)=>`<option value="${i}">${x[0]}</option>`).join("");$("sensO").value="6";
+}
+function renderGraphs(){
+ const F=R.F,Rr=R.Rr;
+ $("gTr").innerHTML=chart({series:[{name:"Front",color:CF,pts:trans(F)},{name:"Rear",color:CR,pts:trans(Rr)}],logX:true,xl:"Frequency (Hz)",yl:"Body / road displacement",y0:0,aria:"Transmissibility"});
+ const v=Math.max(1,parseFloat($("spd").value)||40)/3.6,hh=(parseFloat($("stepH").value)||30)/1000,dl=S.L/1000/v;
+ const Te=Math.max(2.5,0.2+dl+2),fS=stepSim(F,0.2,hh,Te),rS=stepSim(Rr,0.2+dl,hh,Te);
+ $("gStep").innerHTML=chart({series:[{name:"Front body",color:CF,pts:fS},{name:"Rear body",color:CR,pts:rS},{name:"Step",color:"var(--steel)",dash:"5 4",w:1.4,pts:[[0,0],[0.2,0],[0.2,hh*1000],[Te,hh*1000]]}],xl:"Time (s)",yl:"Body displacement (mm)",aria:"Step response"});
+ $("gPitch").innerHTML=chart({series:[{name:"Pitch, nose up +",color:"var(--ink)",pts:fS.map((p,i)=>[p[0],Math.atan((p[1]-rS[i][1])/S.L)/D])}],xl:"Time (s)",yl:"Pitch angle (°)",h:200,aria:"Pitch response"});
+ // sensitivity
+ const key=$("sensP").value,oi=+$("sensO").value,[lab,fn,rk]=SENS_OUT[oi];
+ const [ax,k]=key.includes(".")?key.split("."):[null,key];
+ const base=ax?S[ax][k]:S[k];
+ if(ax&&linkedKeys(ax).includes(k))$("gSens").innerHTML=`<p class="warn">This input is set by the hardpoints while they are linked. Turn off the link on the Hardpoints tab to sweep it.</p>`;
+ else if(!base)$("gSens").innerHTML=`<p class="warn">The current value is zero, so a percentage sweep has nothing to vary. Enter a non-zero value first.</p>`;
+ else{const pts=[];for(let i=0;i<=24;i++){const x=base*(0.6+0.8*i/24),Sx=clone(S);if(ax)Sx[ax][k]=x;else Sx[k]=x;const y=fn(compute(Sx,R.ay));pts.push([x,y])}
+  $("gSens").innerHTML=chart({series:[{color:CF,pts}],xl:$("sensP").selectedOptions[0].text,yl:lab,vlines:[base],band:rk?RANGES[rk]:null,aria:"Sensitivity"});}
+ // roll vs ay
+ const rp=[],lf=[],lr=[];for(let i=0;i<=22;i++){const a=i*0.05;rp.push([a,R.rg*a]);lf.push([a,(1-R.LF.perG*a/R.LF.stat)*100]);lr.push([a,(1-R.LR.perG*a/R.LR.stat)*100])}
+ $("gRoll").innerHTML=chart({series:[{name:"Body roll",color:"var(--ink)",pts:rp}],xl:"Lateral acceleration (g)",yl:"Roll angle (°)",h:220,y0:0,aria:"Roll vs lateral acceleration"});
+ $("gLift").innerHTML=chart({series:[{name:"Front inner wheel",color:CF,pts:lf},{name:"Rear inner wheel",color:CR,pts:lr}],xl:"Lateral acceleration (g)",yl:"Inner wheel load left (%)",h:220,y0:0,aria:"Inner wheel load"});
+}
+
+/* ---------- wiring ---------- */
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
  document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
  document.querySelectorAll(".pane").forEach(p=>p.hidden=p.id!==b.dataset.tab);
  window.scrollTo({top:0});
 }));
-document.getElementById("ay").addEventListener("input",calc);
-function load(k){S=JSON.parse(JSON.stringify(PRESETS[k]));save();buildInputs();calc();}
-document.getElementById("pSedan").onclick=()=>load("sedan");
-document.getElementById("pSuv").onclick=()=>load("suv");
-document.getElementById("copy").onclick=async()=>{
+$("ay").addEventListener("input",calc);
+$("trav").addEventListener("input",renderHP);
+["spd","stepH","sensP","sensO"].forEach(id=>$(id).addEventListener("input",renderGraphs));
+$("hpF").onclick=()=>{hpAx="F";buildHP();renderHP()};
+$("hpR").onclick=()=>{hpAx="R";buildHP();renderHP()};
+$("hpType").onchange=e=>{S.HP[hpAx].type=e.target.value;save();buildHP();buildInputs();calc()};
+$("hpCam").oninput=e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){S.HP[hpAx].cam=v;save();calc()}};
+$("hpLink").onchange=e=>{S.link=e.target.checked;save();buildInputs();calc()};
+$("hpReset").onclick=()=>{S.HP[hpAx]=clone(HP_DEF[hpAx]);save();buildHP();buildInputs();calc()};
+function load(k){const hp=S.HP,ln=S.link;S=clone(PRESETS[k]);S.HP=hp;S.link=ln;save();buildInputs();calc();}
+$("pSedan").onclick=()=>load("sedan");
+$("pSuv").onclick=()=>load("suv");
+$("copy").onclick=async()=>{
  const t=[...document.querySelectorAll("#tRes tr")].map(r=>[...r.cells].map(c=>c.innerText.trim()).join("\t")).join("\n");
- const b=document.getElementById("copy");
+ const b=$("copy");
  try{await navigator.clipboard.writeText(t);b.textContent="Copied";}catch(e){b.textContent="Copy blocked by browser";}
  setTimeout(()=>b.textContent="Copy results",1600);
 };
-buildInputs();calc();
-
+buildInputs();buildHP();buildSens();calc();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
 </body>
 </html>
