@@ -1,0 +1,25 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Dependencies and builds (if tooling is added later)
+node_modules/
+dist/
+build/
+
+# Logs and local secrets
+*.log
+.env
+.env.*
+
+# Archives and personal working files
+*.zip
+*.bak
+scratch/
